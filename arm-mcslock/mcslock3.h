@@ -5,7 +5,7 @@
 using namespace std;
 
 #define COMPILER_BALLIER() __asm__ __volatile__("" : : : "memory")
-#define CPU_RELAX() __asm__ __volatile__("yield\n" : : :"memory")
+#define CPU_RELAX() __asm__ __volatile__("pause\n" : : :"memory")
 #define CAS(address, exp, target) __sync_bool_compare_and_swap(address, exp, target)
 #define ATOMIC_EXCHANGE(address, val) __atomic_exchange_n(address, val, __ATOMIC_SEQ_CST)
 #define CPU_BALLIER() __sync_synchronize()
@@ -36,6 +36,9 @@ static void aquire_lock(mcs_lock &lock) {
 	pre->next = me;
 	while (me->waiting) {
 //		CPU_RELAX();
+    __asm__ __volatile__(
+        "wfe;"
+        ::: "memory");
 	}
 	CPU_BALLIER();
 }
@@ -50,6 +53,9 @@ static void release_lock(mcs_lock &lock) {
 		}
 		while (me->next == NULL) {
 //			CPU_RELAX();
+      __asm__ __volatile__(
+          "sev;"
+          :::"memory");
 		}
 	}
 	me->next->waiting = 0;
